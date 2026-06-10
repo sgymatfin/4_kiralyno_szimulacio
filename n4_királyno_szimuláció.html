@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<title>N=4 Királynő Backtracking Szimulátor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#fafaf8;color:#111;padding:1.5rem}
+h1{font-size:18px;font-weight:600;margin-bottom:4px}
+.subtitle{font-size:12px;color:#777;margin-bottom:14px}
+.root{display:flex;flex-direction:column;gap:10px;max-width:680px;margin:0 auto}
+.top{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.board-col{flex:0 0 auto}
+.right-col{flex:1;min-width:180px;display:flex;flex-direction:column;gap:8px}
+.board{display:grid;grid-template-columns:repeat(4,60px);grid-template-rows:repeat(4,60px);gap:0;border:2px solid #bbb;border-radius:5px;overflow:hidden}
+.cell{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:32px;transition:background .18s}
+.cell.light{background:#f1efe8}.cell.dark{background:#d3d1c7}
+.cell.try{background:#fde9a2!important}.cell.placed{background:#c8f0e2!important}
+.cell.conflict{background:#fcd5d5!important}.cell.solution{background:#dddaff!important}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat{background:#f0efea;border-radius:6px;padding:7px 8px;text-align:center}
+.stat .val{font-size:20px;font-weight:600;color:#111}
+.stat .lbl{font-size:10px;color:#777;margin-top:1px}
+.info{background:#f0efea;border-radius:6px;padding:9px 11px;font-size:13px;color:#555;line-height:1.6;min-height:52px}
+.info b{color:#111}
+.badge{display:inline-block;font-size:11px;font-weight:500;border-radius:20px;padding:2px 10px}
+.badge-place{background:#e1f5ee;color:#085041}.badge-try{background:#faeeda;color:#633806}
+.badge-back{background:#fcebeb;color:#791f1f}.badge-sol{background:#eeedfe;color:#3c3489}
+.badge-done{background:#e8e8e8;color:#444}
+.code{font-family:monospace;font-size:12px;background:#f0efea;border-radius:6px;padding:8px 10px;color:#555;line-height:1.7;white-space:pre;overflow-x:auto}
+.code .hl{background:#eeedfe;color:#3c3489;border-radius:3px;padding:0 2px}
+.controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.btn{font-size:13px;padding:6px 14px;border-radius:6px;border:1px solid #ccc;background:#fff;color:#111;cursor:pointer}
+.btn:hover{background:#f0efea}.btn:disabled{opacity:.38;cursor:default}
+.speed-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#777}
+.speed-row input{width:100px;accent-color:#7F77DD}
+.stepbar-wrap{width:100%;height:7px;background:#e8e8e4;border-radius:4px;overflow:hidden;cursor:pointer}
+.stepbar-fill{height:100%;background:#7F77DD;border-radius:4px;transition:width .1s}
+.step-labels{display:flex;justify-content:space-between;font-size:10px;color:#999;margin-top:2px}
+.sols-label{font-size:11px;color:#777;margin-bottom:4px;margin-top:8px}
+.sols-row{display:flex;gap:8px;flex-wrap:wrap}
+.mini-board{display:grid;grid-template-columns:repeat(4,16px);grid-template-rows:repeat(4,16px);gap:0;border:1px solid #ccc;border-radius:3px;overflow:hidden;opacity:.25;transition:opacity .3s}
+.mini-board.found{opacity:1}
+.mc{width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px}
+.mc.ml{background:#f1efe8}.mc.md{background:#d3d1c7}
+</style>
+</head>
+<body>
+<div class="root">
+  <div>
+    <h1>N=4 Királynő – Backtracking Szimulátor</h1>
+    <div class="subtitle">78 lépés · 2 megoldás · Teljes keresési fa vizualizációja</div>
+  </div>
+  <div class="top">
+    <div class="board-col">
+      <div class="board" id="board"></div>
+      <div class="sols-label">Megoldások (2 db)</div>
+      <div class="sols-row" id="sols"></div>
+    </div>
+    <div class="right-col">
+      <div class="stats">
+        <div class="stat"><div class="val" id="s-step">0</div><div class="lbl">lépés</div></div>
+        <div class="stat"><div class="val" id="s-isafe">0</div><div class="lbl">isSafe()</div></div>
+        <div class="stat"><div class="val" id="s-place">0</div><div class="lbl">lerakás</div></div>
+        <div class="stat"><div class="val" id="s-back">0</div><div class="lbl">visszavétel</div></div>
+      </div>
+      <div><span class="badge badge-done" id="badge">Indulásra kész</span></div>
+      <div class="info" id="info">Nyomd a <b>▶ Auto</b> vagy a <b>→ Következő</b> gombot az indításhoz.</div>
+      <div class="code" id="code">–</div>
+    </div>
+  </div>
+  <div class="stepbar-wrap" id="stepbar-wrap" title="Kattints az ugráshoz">
+    <div class="stepbar-fill" id="stepbar" style="width:0%"></div>
+  </div>
+  <div class="step-labels"><span>1. lépés</span><span id="step-of">/ 78</span></div>
+  <div class="controls">
+    <button class="btn" id="btn-first">⏮</button>
+    <button class="btn" id="btn-prev" disabled>← Vissza</button>
+    <button class="btn" id="btn-next">Következő →</button>
+    <button class="btn" id="btn-last">⏭</button>
+    <button class="btn" id="btn-auto">▶ Auto</button>
+    <button class="btn" id="btn-reset">↺ Reset</button>
+  </div>
+  <div class="speed-row">
+    <span>Sebesség:</span>
+    <input type="range" id="speed" min="60" max="950" value="500" step="10">
+    <span id="speed-lbl">közepes</span>
+  </div>
+</div>
+<script>
+const N=4;
+const steps=[];
+const bd=Array(N).fill(-1);
+let _isafe=0,_place=0,_back=0,_sol=0;
+
+function isSafe(row,col){
+  _isafe++;
+  for(let i=0;i<row;i++)
+    if(bd[i]===col||Math.abs(bd[i]-col)===Math.abs(i-row)) return false;
+  return true;
+}
+function solve(row){
+  if(row===N){
+    _sol++;
+    steps.push({type:'sol',board:[...bd],isafe:_isafe,place:_place,back:_back,sol:_sol,
+      msg:`🎉 <b>Megoldás #${_sol}!</b> Mind a 4 sor ki van töltve, egyik sem támadja a másikat.`,
+      code:`if (row == N) {\n  megoldasok++; kiir();\n  return;\n}`,row:-1,col:-1});
+    return;
+  }
+  for(let col=0;col<N;col++){
+    const safe=isSafe(row,col);
+    steps.push({type:safe?'place':'try',board:[...bd],isafe:_isafe,place:_place,back:_back,sol:_sol,
+      row,col,safe,
+      msg:safe
+        ?`<b>${row+1}. sor, ${col+1}. oszlop: szabad!</b> Királyno lerakva → rekurzív hívás a következő sorra.`
+        :`${row+1}. sor, ${col+1}. oszlop: <b>ütközés</b> (sor/oszlop/átló) → következő oszlop.`,
+      code:safe
+        ?`if (isSafe(${row}, ${col})) {\n  board[${row}] = ${col};\n  <span class="hl">solve(${row+1});</span>\n}`
+        :`isSafe(${row}, ${col})\n  → false  // ütközés, col++`
+    });
+    if(safe){
+      bd[row]=col;_place++;
+      steps[steps.length-1].board=[...bd];
+      steps[steps.length-1].place=_place;
+      solve(row+1);
+      bd[row]=-1;_back++;
+      steps.push({type:'back',board:[...bd],isafe:_isafe,place:_place,back:_back,sol:_sol,
+        row,col,
+        msg:`<b>Visszalépés:</b> a ${row+1}. sorban a ${col+1}. oszloptól nem vezet megoldás. Királyno visszavéve.`,
+        code:`// solve(${row+1}) nem hozott megoldást\n// board[${row}] = -1\n// col++ folytatódik`
+      });
+    }
+  }
+}
+solve(0);
+const TOTAL=steps.length;
+const SOLUTIONS=[[1,3,0,2],[2,0,3,1]];
+
+const $=id=>document.getElementById(id);
+const boardEl=$('board');
+const cells=[];
+for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+  const div=document.createElement('div');
+  div.className='cell '+((r+c)%2===0?'light':'dark');
+  boardEl.appendChild(div);
+  cells.push({el:div,r,c});
+}
+const solsEl=$('sols');
+SOLUTIONS.forEach(sol=>{
+  const mb=document.createElement('div');
+  mb.className='mini-board';
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const mc=document.createElement('div');
+    mc.className='mc '+((r+c)%2===0?'ml':'md');
+    if(sol[r]===c) mc.textContent='♛';
+    mb.appendChild(mc);
+  }
+  solsEl.appendChild(mb);
+});
+const miniBoards=solsEl.querySelectorAll('.mini-board');
+const BADGE={try:['badge-try','isSafe() ellenőrzés'],place:['badge-place','Királyno lerakva'],back:['badge-back','Visszalépés'],sol:['badge-sol','✓ Megoldás!']};
+
+let cur=-1,autoTimer=null;
+function render(){
+  const st=cur>=0?steps[cur]:null;
+  const board=st?st.board:Array(N).fill(-1);
+  cells.forEach(({el,r,c})=>{
+    const base=(r+c)%2===0?'light':'dark';
+    let cls='cell '+base;
+    if(st){
+      if(r===st.row&&c===st.col) cls+=' '+(st.type==='place'?'placed':st.type==='back'?'conflict':'try');
+      else if(st.type==='sol'&&board[r]===c) cls+=' solution';
+      else if(board[r]===c&&r<(st.row>=0?st.row:N)) cls+=' placed';
+    }
+    el.className=cls;
+    el.textContent=board[r]===c?'♛':'';
+  });
+  $('s-step').textContent=cur>=0?cur+1:0;
+  $('s-isafe').textContent=st?st.isafe:0;
+  $('s-place').textContent=st?st.place:0;
+  $('s-back').textContent=st?st.back:0;
+  if(st){
+    const[bc,bl]=BADGE[st.type]||['badge-done','–'];
+    $('badge').className='badge '+bc;$('badge').textContent=bl;
+    $('info').innerHTML=st.msg;$('code').innerHTML=st.code;
+  } else {
+    $('badge').className='badge badge-done';$('badge').textContent='Indulásra kész';
+    $('info').innerHTML='Nyomd a <b>▶ Auto</b> vagy a <b>→ Következő</b> gombot az indításhoz.';
+    $('code').textContent='–';
+  }
+  $('stepbar').style.width=(cur<0?0:((cur+1)/TOTAL*100))+'%';
+  $('step-of').textContent='/ '+TOTAL;
+  $('btn-prev').disabled=cur<=0;$('btn-next').disabled=cur>=TOTAL-1;
+  $('btn-first').disabled=cur<=0;$('btn-last').disabled=cur>=TOTAL-1;
+}
+function goTo(n){
+  miniBoards.forEach(mb=>mb.classList.remove('found'));
+  for(let i=0;i<=n;i++) if(steps[i].type==='sol'){const idx=steps[i].sol-1;if(idx<miniBoards.length)miniBoards[idx].classList.add('found');}
+  cur=n;render();
+}
+function next(){if(cur<TOTAL-1)goTo(cur+1);}
+function prev(){if(cur>0)goTo(cur-1);else{cur=-1;miniBoards.forEach(mb=>mb.classList.remove('found'));render();}}
+$('btn-next').onclick=()=>{stopAuto();next();};
+$('btn-prev').onclick=()=>{stopAuto();prev();};
+$('btn-first').onclick=()=>{stopAuto();cur=-1;miniBoards.forEach(mb=>mb.classList.remove('found'));render();};
+$('btn-last').onclick=()=>{stopAuto();goTo(TOTAL-1);};
+$('btn-reset').onclick=()=>{stopAuto();cur=-1;miniBoards.forEach(mb=>mb.classList.remove('found'));render();};
+function delay(){return 980-parseInt($('speed').value);}
+function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;$('btn-auto').textContent='▶ Auto';}}
+$('btn-auto').onclick=function(){
+  if(autoTimer){stopAuto();return;}
+  if(cur>=TOTAL-1){cur=-1;miniBoards.forEach(mb=>mb.classList.remove('found'));render();}
+  $('btn-auto').textContent='⏸ Pause';
+  autoTimer=setInterval(()=>{if(cur>=TOTAL-1){stopAuto();return;}next();},delay());
+};
+$('speed').oninput=function(){
+  const v=parseInt(this.value);
+  $('speed-lbl').textContent=v<320?'lassú':v<660?'közepes':'gyors';
+  if(autoTimer){clearInterval(autoTimer);autoTimer=setInterval(()=>{if(cur>=TOTAL-1){stopAuto();return;}next();},delay());}
+};
+$('stepbar-wrap').addEventListener('click',e=>{
+  const rect=e.currentTarget.getBoundingClientRect();
+  const n=Math.max(0,Math.min(TOTAL-1,Math.round((e.clientX-rect.left)/rect.width*(TOTAL-1))));
+  stopAuto();goTo(n);
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'){stopAuto();next();}
+  else if(e.key==='ArrowLeft'){stopAuto();prev();}
+  else if(e.key===' '){e.preventDefault();$('btn-auto').click();}
+});
+render();
+</script>
+</body>
+</html>
